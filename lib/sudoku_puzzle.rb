@@ -29,21 +29,19 @@ class SudokuPuzzle
 		# return the integer format of everything that's left
 		@spaces = []
 		value_string = puzzle_string.gsub(/[^\d]/, '').split(//).reverse
+		puts value_string
 		ROWS.each do |letter|	
 			COLUMNS.each do |number|
 				@spaces.push(SudokuSpace.new("#{letter}#{number}", value_string.pop))
 			end
 		end
-		@spaces.select { |space| space.value != 0 } .each do |space|
-			peers(space.coords).each do |peer|
-				eliminate(peer.coords, space.value.to_s)
-			end
-		end
 	end
+
 	def space(coords)
 		#called with things like "A1", "D5", etc.
 		return spaces.select { |space| space.letter == coords[0] && space.number == coords[1] } .pop
 	end
+
 	def units(coords)
 		given_space = space(coords)
 
@@ -52,6 +50,7 @@ class SudokuPuzzle
 				  			  (box(given_space).to_set.delete given_space)]
 		return units_composition
 	end
+
 	def peers(coords)
 		peers_composition = Set.new()
 		units(coords).each do |unit|
@@ -60,46 +59,22 @@ class SudokuPuzzle
 		return peers_composition
 	end
 
-	def assign(coords, value)
-		#if we can safely eliminate this value from all peers
-		#of the coordinate, then do so and assign it.
-
-		#check all peers to make sure their value is not the one we are eliminating
-		peers(coords).each do |peer|
-			if peer.value == value
-				return false
-			end
-		end
-		peers(coords).each do |peer|
-			eliminate(peer.coords, value)
-		end
-		space(coords).possibilities = [value].to_set
-		space(coords).value = value
-		return true
-	end
-	def eliminate(coords, value)
-		space(coords).possibilities.delete value
-		if(space(coords).possibilities.count == 1)
-			space(coords).value = space(coords).possibilities.to_a[0]
-		end
-	end
-
 	def present
 		puzzle_string = ""
-		COLUMNS.each do |column|
-			if (column == 3 || column == 6)
+		ROWS.each do |row|
+			if (row == 'D' || row == 'G')
 				puzzle_string << "------+------+------\n"
 			end
-			ROWS.each do |row|
-				if (row == 3 || row == 6)
+			COLUMNS.each do |col|
+				if (col == '4' || col == '7')
 					puzzle_string << '|'
 				end
-				puzzle_string << self.space("#{row}#{column}").value.to_s
-				unless(row == 8)
+				puzzle_string << self.space("#{row}#{col}").value.to_s
+				unless(col == 8)
 					puzzle_string  << " "
 				end
 			end
-			unless column == 8
+			unless col == 8
 				puzzle_string << "\n"
 			end
 		end
@@ -111,9 +86,11 @@ class SudokuPuzzle
 	def row(letter)
 		return spaces.select { |space| space.letter == letter }
 	end
+
 	def column(number)
 		return spaces.select { |space| space.number == number }
 	end
+
 	def box(space)
 		#upper_left_corner = "#{COLUMNS[(COLUMNS.index(space.number) / 3).floor]}#{ROWS[(ROWS.index(space.letter) / 3).floor]}"
 		numbers = COLUMNS.slice((COLUMNS.index(space.number) / 3).floor, 3)
@@ -121,4 +98,5 @@ class SudokuPuzzle
 
 		return spaces.select { |space| (numbers.include? space.number) && (letters.include? space.letter) }
 	end
+
 end

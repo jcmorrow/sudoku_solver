@@ -7,7 +7,7 @@ describe SudokuSpace do
 			it 'assigns the correct x and y values' do
 				expect(subject.letter).to eq('C')
 				expect(subject.number).to eq('4')
-				expect(subject.value).to eq(0)
+				expect(subject.value).to eq('0')
 			end
 		end
 		describe '.known?' do
@@ -17,7 +17,7 @@ describe SudokuSpace do
 		end
 	end
 	context "given a valid, known sudoku space" do
-		subject { SudokuSpace.new('C4', 1) }
+		subject { SudokuSpace.new('C4', '1') }
 		describe '.known?' do
 			it 'returns true for known values' do
 				expect(subject.known?).to eq(true)
