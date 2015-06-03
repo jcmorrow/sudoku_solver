@@ -28,12 +28,12 @@ class SudokuPuzzle
 		# remove everything that isn't a number, split it into an array, and
 		@spaces = []
 		value_string = puzzle_string.gsub(/[^\d]/, '').split(//).reverse
+		puts value_string
 		ROWS.each do |letter|	
 			COLUMNS.each do |number|
 				@spaces.push(SudokuSpace.new("#{letter}#{number}", value_string.pop))
 			end
 		end
-
 		@spaces.select { |space| space.known? } .each do |space|
 			assign(space, space.value)
 		end
@@ -82,13 +82,23 @@ class SudokuPuzzle
 		return true
 	end
 	def present
-		puzzle_string = ''
-		ROWS.each_with_index do |row, row_index|
-			COLUMNS.each_with_index do |column, col_index|
-				puzzle_string << at_space("#{row}#{column}").value
-				puzzle_string << ' '
+		puzzle_string = ""
+		ROWS.each do |row|
+			if (row == 'D' || row == 'G')
+				puzzle_string << "------+------+------\n"
 			end
-			puzzle_string << "\n"
+			COLUMNS.each do |column|
+				if (column == '4' || column == '7')
+					puzzle_string << '|'
+				end
+				puzzle_string << self.at_space("#{row}#{column}").value.to_s
+				unless(column == 8)
+					puzzle_string  << " "
+				end
+			end
+			unless row == 8
+				puzzle_string << "\n"
+			end
 		end
 		return puzzle_string
 	end
@@ -105,13 +115,16 @@ class SudokuPuzzle
 	def row(letter)
 		return spaces.select { |space| space.letter == letter }
 	end
+
 	def column(number)
 		return spaces.select { |space| space.number == number }
 	end
+
 	def box(space)
 		numbers = COLUMNS.slice(((COLUMNS.index(space.number) / 3).floor)*3, 3)
 		letters = ROWS.slice(((ROWS.index(space.letter) / 3).floor)*3, 3)
 
 		return spaces.select { |space| (numbers.include? space.number) && (letters.include? space.letter) }
 	end
+
 end

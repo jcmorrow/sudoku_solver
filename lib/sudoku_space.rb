@@ -6,8 +6,8 @@ class SudokuSpace
 		@letter = identity[0]
 		@number = identity[1]
 		if(value != "0")
-			@value = value
-			@possibilities = Set.new([value])
+			@value = value.to_s
+			@possibilities = Set.new([ value.to_s ])
 		else
 			@value = "0"
 			@possibilities = Set.new(%w[ 1 2 3 4 5 6 7 8 9 ])
