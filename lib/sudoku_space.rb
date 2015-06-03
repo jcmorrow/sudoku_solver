@@ -15,10 +15,10 @@ class SudokuSpace
 	end
 
 	def known?
-		unless value == 0
-			return true
-		else
+		if value == '0'
 			return false
+		else
+			return true
 		end
 	end
 
@@ -26,4 +26,14 @@ class SudokuSpace
 		"#{letter}#{number}"
 	end
 
+	def eliminate(possibility)
+		unless possibilities.length == 1 && possibilities.to_a[0] == possibility
+			possibilities.delete possibility
+		else
+			raise "Conflict"
+		end
+		if possibilities.size == 1
+			value = possibilities.to_a()[0]
+		end
+	end
 end

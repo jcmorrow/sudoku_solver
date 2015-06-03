@@ -26,7 +26,6 @@ class SudokuPuzzle
 	#
 	def initialize(puzzle_string)
 		# remove everything that isn't a number, split it into an array, and
-		# return the integer format of everything that's left
 		@spaces = []
 		value_string = puzzle_string.gsub(/[^\d]/, '').split(//).reverse
 		ROWS.each do |letter|	
@@ -34,76 +33,71 @@ class SudokuPuzzle
 				@spaces.push(SudokuSpace.new("#{letter}#{number}", value_string.pop))
 			end
 		end
-		@spaces.select { |space| space.value != 0 } .each do |space|
-			peers(space.coords).each do |peer|
-				eliminate(peer.coords, space.value.to_s)
-			end
+
+		@spaces.select { |space| space.known? } .each do |space|
+			assign(space, space.value)
 		end
 	end
-	def space(coords)
+	def at_space(coords)
 		#called with things like "A1", "D5", etc.
 		return spaces.select { |space| space.letter == coords[0] && space.number == coords[1] } .pop
 	end
-	def units(coords)
-		given_space = space(coords)
-
-		units_composition = [ (row(given_space.letter).to_set.delete(given_space)),
-				  			  (column(given_space.number).to_set.delete given_space),
-				  			  (box(given_space).to_set.delete given_space)]
+	def units(space)
+		units_composition = [ (row(space.letter).to_set.delete(space)),
+				  			  (column(space.number).to_set.delete space),
+				  			  (box(space).to_set.delete space)]
 		return units_composition
 	end
-	def peers(coords)
+	def peers(space)
 		peers_composition = Set.new()
-		units(coords).each do |unit|
+		units(space).each do |unit|
 			peers_composition = peers_composition.merge unit
 		end
 		return peers_composition
 	end
-
-	def assign(coords, value)
-		#if we can safely eliminate this value from all peers
-		#of the coordinate, then do so and assign it.
-
-		#check all peers to make sure their value is not the one we are eliminating
-		peers(coords).each do |peer|
-			if peer.value == value
-				return false
+	def assign(space, value)
+		puts "assign called on #{space.coords} to #{value}"
+		unless solved?
+			%W[ 1 2 3 4 5 6 7 8 9 ].select { |p| p != value } .each do |poss|
+				space.possibilities.delete poss
 			end
+			space.value = value
+			peers(space).each do |peer|
+				eliminate(peer, value)
+			end
+			return true
 		end
-		peers(coords).each do |peer|
-			eliminate(peer.coords, value)
+	end
+	def eliminate(space, possibility)
+		puts "eliminate called on #{space.coords}"
+		unless space.possibilities.length == 1 && space.possibilities.to_a[0] == possibility
+			space.possibilities.delete possibility
+		else
+			raise "Conflict: Cannot eliminate #{possibility} from #{space.coords}"
 		end
-		space(coords).possibilities = [value].to_set
-		space(coords).value = value
+		if space.possibilities.size == 1 && space.value == '0'
+			puts "assigning #{space.possibilities.to_a()[0]} to #{space.coords}"
+			assign(space, space.possibilities.to_a()[0])
+		end
 		return true
 	end
-	def eliminate(coords, value)
-		space(coords).possibilities.delete value
-		if(space(coords).possibilities.count == 1)
-			space(coords).value = space(coords).possibilities.to_a[0]
-		end
-	end
-
 	def present
-		puzzle_string = ""
-		COLUMNS.each do |column|
-			if (column == 3 || column == 6)
-				puzzle_string << "------+------+------\n"
+		puzzle_string = ''
+		ROWS.each_with_index do |row, row_index|
+			COLUMNS.each_with_index do |column, col_index|
+				puzzle_string << at_space("#{row}#{column}").value
+				puzzle_string << ' '
 			end
-			ROWS.each do |row|
-				if (row == 3 || row == 6)
-					puzzle_string << '|'
-				end
-				puzzle_string << self.space("#{row}#{column}").value.to_s
-				unless(row == 8)
-					puzzle_string  << " "
-				end
-			end
-			unless column == 8
-				puzzle_string << "\n"
-			end
+			puzzle_string << "\n"
 		end
 		return puzzle_string
+	end
+	def solved?
+		if (spaces.select { |space| !space.known? } .length == 0 )
+			return true
+		else
+			return false
+		end
 	end
 
 	private
@@ -115,9 +109,8 @@ class SudokuPuzzle
 		return spaces.select { |space| space.number == number }
 	end
 	def box(space)
-		#upper_left_corner = "#{COLUMNS[(COLUMNS.index(space.number) / 3).floor]}#{ROWS[(ROWS.index(space.letter) / 3).floor]}"
-		numbers = COLUMNS.slice((COLUMNS.index(space.number) / 3).floor, 3)
-		letters = ROWS.slice((ROWS.index(space.letter) / 3).floor, 3)
+		numbers = COLUMNS.slice(((COLUMNS.index(space.number) / 3).floor)*3, 3)
+		letters = ROWS.slice(((ROWS.index(space.letter) / 3).floor)*3, 3)
 
 		return spaces.select { |space| (numbers.include? space.number) && (letters.include? space.letter) }
 	end
