@@ -90,8 +90,14 @@ EOS
 EOS
     end
   end
+=end
+
+  it 'does some things' do
+    puts SudokuSolver.solve(open_sudoku_puzzle('easy')).present
+    puts SudokuSolver.solve(open_sudoku_puzzle('hard')).present
+  end
+
   def open_sudoku_puzzle(file_name)
     File.read("spec/fixtures/" + file_name + ".sudoku")
   end
-=end
 end

@@ -1,34 +1,62 @@
+require 'sudoku_puzzle'
+
 class SudokuSolver
 
-  def initialize(puzzle)
-    @puzzle = puzzle
+  def initialize(puzzle_string)
+    @puzzle = SudokuPuzzle.new(puzzle_string)
   end
 
-  def self.solve(puzzle)
-    new(puzzle).solve
+  def self.solve(puzzle_string)
+    new(puzzle_string).solve
   end
-
-  def solve
+=begin
+      solve
+        propogate constraints of current knowns
+        solved?
+          yes => great, return it
+          no => OK, copy, guess, solve.
+        invalid?
+          yes => ok, return false
+          no => ok, guess, solve.
+=end  
+  def solve(puzzle = @puzzle)
     #make sure we have unknown spaces
-    if (@puzzle.spaces.select { |space| space.known? == false } .length) > 0
-      while(spaces_found)
-        spaces_found = false
-        @puzzle.spaces.select { |space| space.known? == false } .each do |space|
-          possibilities = eliminate_possibilities(space)
-          if possibilities.length == 1
-            spaces_found = true
-            space.value = (possibilities.to_a)[0]
-          end
-        end
+    puts "SOLVE CALLED"
+    puzzle.propogate_constraints
+    puts puzzle.present
+    if puzzle.solved?
+      puts "SOLVED"
+      return puzzle
+    elsif puzzle.invalid?
+      puts "INVALID"
+      return false
+    else
+      puts "PUZZLE NOT SOLVED AND PUZZLE NOT INVALID"
+      new_copy = copy(puzzle)
+      puts new_copy.present
+
+      unknown = new_copy.spaces.select { |space| !space.known? }
+      space_to_guess = unknown.sort { |a, b| a.possibilities.size <=> b.possibilities.size } [0]
+      puts "#{space_to_guess}"
+      guess = space_to_guess.possibilities.to_a[0]
+      puts "Assigning #{guess} to #{space_to_guess.coords}"
+      new_copy.assign(space_to_guess, guess)
+      puts new_copy.present
+      if(solve(new_copy))
+        return new_copy
+      else
+        puts "eliminating #{guess} from #{space_to_guess.coords}"
+        puzzle.eliminate(puzzle.get_space(space_to_guess.coords), guess)
+        puzzle.propogate_constraints
+        solve(puzzle)
       end
-      return @puzzle.present
     end
   end
 
-  def eliminate_possibilities(space)
-    #start with one through nine. Remove some.
-    possibilities = (1..9).to_a.to_set
-    impossible_values = @puzzle.row(space.y_coord).to_set + @puzzle.column(space.x_coord).to_set + @puzzle.section((space.y_coord/3).floor, (space.x_coord/3).floor).to_set
-    return possibilities - impossible_values
+  def copy(puzzle)
+    return SudokuPuzzle.new(puzzle.present)
+  end
+  def present
+    return @puzzle.present
   end
 end

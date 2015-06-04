@@ -28,17 +28,17 @@ class SudokuPuzzle
 		# remove everything that isn't a number, split it into an array, and
 		@spaces = []
 		value_string = puzzle_string.gsub(/[^\d]/, '').split(//).reverse
-		puts value_string
 		ROWS.each do |letter|	
 			COLUMNS.each do |number|
 				@spaces.push(SudokuSpace.new("#{letter}#{number}", value_string.pop))
 			end
 		end
-		@spaces.select { |space| space.known? } .each do |space|
-			assign(space, space.value)
-		end
+		#NO
+		#@spaces.select { |space| space.known? } .each do |space|
+		#	assign(space, space.value)
+		#end
 	end
-	def at_space(coords)
+	def get_space(coords)
 		#called with things like "A1", "D5", etc.
 		return spaces.select { |space| space.letter == coords[0] && space.number == coords[1] } .pop
 	end
@@ -56,32 +56,41 @@ class SudokuPuzzle
 		return peers_composition
 	end
 	def assign(space, value)
-		puts "assign called on #{space.coords} to #{value}"
-		unless solved?
+		if (!solved?) && (space.possibilities.include?(value))
 			%W[ 1 2 3 4 5 6 7 8 9 ].select { |p| p != value } .each do |poss|
 				space.possibilities.delete poss
 			end
 			space.value = value
-			peers(space).each do |peer|
-				eliminate(peer, value)
-			end
+			return propogate_constraints
+		else
 			return true
 		end
 	end
+	def propogate_constraints
+		spaces.select { |space| space.known? }.each do |space|
+			peers(space).each do |peer|
+				if eliminate(peer, space.value)
+					next
+				else
+					return false 
+				end
+			end
+		end
+		return true
+	end
 	def eliminate(space, possibility)
-		puts "eliminate called on #{space.coords}"
 		unless space.possibilities.length == 1 && space.possibilities.to_a[0] == possibility
 			space.possibilities.delete possibility
 		else
-			raise "Conflict: Cannot eliminate #{possibility} from #{space.coords}"
+			return false
 		end
 		if space.possibilities.size == 1 && space.value == '0'
-			puts "assigning #{space.possibilities.to_a()[0]} to #{space.coords}"
+			"assigning #{space.possibilities.to_a()[0]} to #{space}"
 			assign(space, space.possibilities.to_a()[0])
 		end
 		return true
 	end
-	def present
+	def present item = :value
 		puzzle_string = ""
 		ROWS.each do |row|
 			if (row == 'D' || row == 'G')
@@ -91,7 +100,11 @@ class SudokuPuzzle
 				if (column == '4' || column == '7')
 					puzzle_string << '|'
 				end
-				puzzle_string << self.at_space("#{row}#{column}").value.to_s
+				if(self.get_space("#{row}#{column}").send(item).respond_to? :each)
+					puzzle_string << self.get_space("#{row}#{column}").send(item).count.to_s
+				else
+					puzzle_string << self.get_space("#{row}#{column}").send(item).to_s
+				end
 				unless(column == 8)
 					puzzle_string  << " "
 				end
@@ -102,12 +115,53 @@ class SudokuPuzzle
 		end
 		return puzzle_string
 	end
+	def search
+		puts "SEARCH CALLED"
+		if solved?
+			puts "SEARCH RETURNING SOLVED"
+			return self
+		elsif invalid?
+			puts "SEARCH RETURNING FALSE"
+			return false
+		else
+			copy = self.copy_puzzle
+			unknown_spaces = copy.spaces.select { |space| !space.known? }
+			fewest_possibilities = unknown_spaces.sort { |a, b| a.possibilities.count <=> b.possibilities.count} [0]
+			guessed_space = fewest_possibilities
+			guess = fewest_possibilities.possibilities.to_a[0]
+			puts "Trying #{guess} in #{guessed_space}"
+			copy.assign(fewest_possibilities, fewest_possibilities.possibilities.to_a[0])
+			puts "SEARCH going on"
+			if(copy.search)
+				puts "solved?"
+			else
+				puts "eliminating #{guess} from #{guessed_space}"
+				eliminate(get_space(guessed_space.coords), guess)
+				search
+			end
+		end
+	end
 	def solved?
-		if (spaces.select { |space| !space.known? } .length == 0 )
+		if (spaces.select { |space| !space.known? } .length == 0 && !invalid? )
 			return true
 		else
 			return false
 		end
+	end
+	def invalid?
+		spaces.each do |space|
+			units(space).each do |unit|
+				%w[ 1 2 3 4 5 6 7 8 9 ].each do |number|
+					if(unit.to_a.map(&:value).count(number) > 1)
+						return true
+					end
+				end
+			end
+		end
+		return false
+	end
+	def copy_puzzle
+		return SudokuPuzzle.new(present)
 	end
 
 	private
